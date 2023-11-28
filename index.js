@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const app = express();
@@ -24,10 +24,12 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    await client.connect();
 
     const userCollection = client.db('emsDB').collection('users');
     const demoRequestCollection = client.db('emsDB').collection('demoRequest');
+    const employeesCollection = client.db('emsDB').collection('employees');
+
 
     //jwt API
     app.post("/jwt", async (req, res) => {
@@ -59,6 +61,7 @@ async function run() {
         const email = req.decoded.email;
         const query = {email: email};
         const user = await userCollection.findOne(query);
+        const isAdmin = user?.role === "admin";
         if (!isAdmin) {
             return res.status(403).send({message: 'Forbidden Access'})
         }
@@ -66,11 +69,19 @@ async function run() {
     }
 
 
+
     //Users API 
     app.get('/users', verifyToken, async(req, res) => {
         const result = await userCollection.find().toArray();
         res.send(result);
     })
+
+    app.delete("/users/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await userCollection.deleteOne(query);
+        res.send(result);
+      });
 
     app.post('/users', async(req, res) =>{
         const user = req.body;
@@ -82,6 +93,79 @@ async function run() {
         const result = await userCollection.insertOne(user);
         res.send(result);
     })
+
+
+    app.get('/users/admin/:email', verifyToken, async(req, res) =>{
+        const email = req.params.email;
+        if(email !== req.decoded.email){
+            return res.status(403).send({message: 'Forbidden Access'});
+        }
+        const query = {email: email};
+        const user = await userCollection.findOne(query);
+        let admin = false;
+        let isHR = false;
+        if(user){
+            admin = user?.role === "admin";
+            isHR = user?.role === "hr";
+        }
+        res.send({admin, isHR});
+    })
+
+    //Update to Admin role
+    app.patch("/users/admin/:id", async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+            status: "verified"
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      });
+
+    //Update to Verified Status
+    app.patch("/users/verify/:id", async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            status: "verified"
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      });
+
+    // HR API
+  
+
+    //Employee API
+    // app.post('/employees', async(req, res) =>{
+    //     const user = req.body;
+    //     const query = {email: user.email};
+    //     const existingEmployee = await employeesCollection.findOne(query);
+    //     if(existingEmployee){
+    //         return res.send({message: "Employee already exists", insertedId: null});
+    //     }
+    //     const result = await employeesCollection.insertOne(employee);
+    //     res.send(result);
+    // })
+
+    // app.get('/users/employee/:email', verifyToken, async(req, res) =>{
+    //     const email = req.params.email;
+    //     if(email !== req.decoded.email){
+    //         return res.status(403).send({message: 'Forbidden Access'});
+    //     }
+    //     const query = {email: email};
+    //     const user = await userCollection.findOne(query);
+    //     let employee = false;
+    //     if(user){
+    //         employee = user?.role === "employee";
+    //     }
+    //     res.send({employee});
+    // })
 
     app.get('/demo-request', async(req, res) => {
         const result = await demoRequestCollection.find().toArray();
