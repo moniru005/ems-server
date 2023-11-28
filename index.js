@@ -123,6 +123,20 @@ async function run() {
       res.send(result);
     });
 
+    //Update to HR role
+    app.patch("/users/hr/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: "hr",
+          status: "verified",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     //Update to Verified Status
     app.patch("/users/verify/:id", async (req, res) => {
       const id = req.params.id;
@@ -136,10 +150,28 @@ async function run() {
       res.send(result);
     });
 
+    //Update to Fired Status
+    app.patch("/users/fired/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: "Fired",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     //Salary Pay
     app.post('/salaries', async(req, res) =>{
         const salary = req.body;
         const result = await salariesCollection.insertOne(salary);
+        res.send(result);
+    })
+
+    app.get('/salaries', async(req, res)=>{
+        const result = await salariesCollection.find().toArray();
         res.send(result);
     })
 
