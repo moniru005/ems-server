@@ -32,7 +32,6 @@ async function run() {
     const salariesCollection = client.db("emsDB").collection("salaries");
     const contactsCollection = client.db("emsDB").collection("contacts");
 
-
     //jwt API
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -72,9 +71,12 @@ async function run() {
 
     //Users API
     app.get("/users", verifyToken, async (req, res) => {
+
       const result = await userCollection.find().toArray();
       res.send(result);
     });
+
+
 
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
@@ -94,7 +96,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+    app.get("/users/admin/:email", verifyToken, verifyAdmin, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "Forbidden Access" });
@@ -108,6 +110,28 @@ async function run() {
         isHR = user?.role === "hr";
       }
       res.send({ admin, isHR });
+    });
+
+    //Update to users
+    app.patch("/users/:id", async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          name: item.name,
+          email: item.email,
+          image: item.image,
+          designation: item.designation,
+          bankAccount: item.bankAccount,
+          phone: item.phone,
+          company: item.company,
+          salary: item.salary,
+          role: item.role,
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
     });
 
     //Update to Admin role
@@ -165,41 +189,53 @@ async function run() {
     });
 
     //Salary Pay
-    app.post('/salaries', async(req, res) =>{
-        const salary = req.body;
-        const result = await salariesCollection.insertOne(salary);
-        res.send(result);
-    })
+    app.post("/salaries", async (req, res) => {
+      const salary = req.body;
+      const result = await salariesCollection.insertOne(salary);
+      res.send(result);
+    });
 
-    app.get('/salaries', async(req, res)=>{
-        const result = await salariesCollection.find().toArray();
-        res.send(result);
-    })
+    app.get("/salaries", async (req, res) => {
+      const result = await salariesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // app.patch("/salaries/:id", async (req, res) => {
+    //     const id = req.params.id;
+    //     const filter = { _id: new ObjectId(id) };
+    //     const updatedDoc = {
+    //       $set: {
+    //         status: "paid",
+    //       },
+    //     };
+    //     const result = await userCollection.updateOne(filter, updatedDoc);
+    //     res.send(result);
+    //   });
 
     // Employee Task API
-    app.post('/tasks', async(req, res) =>{
-        const task = req.body;
-        const result = await tasksCollection.insertOne(task);
-        res.send(result);
-    })
+    app.post("/tasks", async (req, res) => {
+      const task = req.body;
+      const result = await tasksCollection.insertOne(task);
+      res.send(result);
+    });
 
-    app.get('/tasks', async(req, res) =>{
-        const result = await tasksCollection.find().toArray();
-        res.send(result);
-    })
+    app.get("/tasks",verifyToken, async (req, res) => {
+      const result = await tasksCollection.find().toArray();
+      res.send(result);
+    });
 
     app.delete("/tasks/:id", async (req, res) => {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const result = await tasksCollection.deleteOne(query);
-        res.send(result);
-      });
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await tasksCollection.deleteOne(query);
+      res.send(result);
+    });
 
     //Reviews
-    app.get('/reviews', async(req, res) =>{
-        const result = await reviewsCollection.find().toArray();
-        res.send(result);
-    })
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewsCollection.find().toArray();
+      res.send(result);
+    });
 
     //Demo Request
     app.get("/demo-request", async (req, res) => {
@@ -219,11 +255,18 @@ async function run() {
     });
 
     // contact api
-    app.post('/contacts', async(req, res) =>{
-        const contact = req.body;
-        const result = await contactsCollection.insertOne(contact);
-        res.send(result);
+    app.post("/contacts", async (req, res) => {
+      const contact = req.body;
+      const result = await contactsCollection.insertOne(contact);
+      res.send(result);
+    });
+
+    //admin stats
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+        const users = await userCollection.estimatedDocumentCount();
+        res.send({users});
     })
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
