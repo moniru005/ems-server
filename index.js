@@ -23,13 +23,14 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // client.connect();
 
     const userCollection = client.db("emsDB").collection("users");
     const demoRequestCollection = client.db("emsDB").collection("demoRequest");
     const reviewsCollection = client.db("emsDB").collection("reviews");
     const tasksCollection = client.db("emsDB").collection("tasks");
     const salariesCollection = client.db("emsDB").collection("salaries");
+    const contactsCollection = client.db("emsDB").collection("contacts");
 
 
     //jwt API
@@ -216,6 +217,13 @@ async function run() {
       const result = await demoRequestCollection.insertOne(user);
       res.send(result);
     });
+
+    // contact api
+    app.post('/contact', async(req, res) =>{
+        const contact = req.body;
+        const result = await contactsCollection.insertOne(contact);
+        res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
