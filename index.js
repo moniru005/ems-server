@@ -63,7 +63,8 @@ async function run() {
       const query = { email: email };
       const user = await userCollection.findOne(query);
       const isAdmin = user?.role === "admin";
-      if (!isAdmin) {
+      
+      if (!isAdmin ) {
         return res.status(403).send({ message: "Forbidden Access" });
       }
       next();
@@ -219,7 +220,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/tasks",verifyToken, async (req, res) => {
+    app.get("/tasks",  async (req, res) => {
       const result = await tasksCollection.find().toArray();
       res.send(result);
     });
@@ -264,8 +265,69 @@ async function run() {
     //admin stats
     app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
         const users = await userCollection.estimatedDocumentCount();
-        res.send({users});
+        const totalSalaryAmount = await salariesCollection.estimatedDocumentCount();
+        const totalTask = await tasksCollection.estimatedDocumentCount();
+        const totalContacts = await contactsCollection.estimatedDocumentCount();
+        
+        const pipeline = [
+            {
+              $group: {
+                _id: null,
+                totalPaidSalary: { $sum: '$salary' },
+              },
+            },
+          ];
+    
+          const result = await salariesCollection.aggregate(pipeline).toArray();
+          const PaidSalary = result.length > 0 ? result[0].totalPaidSalary : 0;
+
+
+        res.send({users, totalSalaryAmount, PaidSalary, totalTask, totalContacts});
     })
+
+    //HR stats
+    app.get("/hr-stats",  async (req, res) => {
+        const users = await userCollection.estimatedDocumentCount();
+        const totalSalaryAmount = await salariesCollection.estimatedDocumentCount();
+        const totalTask = await tasksCollection.estimatedDocumentCount();
+        const totalContacts = await contactsCollection.estimatedDocumentCount();
+        
+        const pipeline = [
+            {
+              $group: {
+                _id: null,
+                totalPaidSalary: { $sum: '$salary' },
+              },
+            },
+          ];
+    
+          const result = await salariesCollection.aggregate(pipeline).toArray();
+          const PaidSalary = result.length > 0 ? result[0].totalPaidSalary : 0;
+
+
+        res.send({users, totalSalaryAmount, PaidSalary, totalTask, totalContacts});
+    })
+
+    //Employee stats
+    app.get("/employee-stats", verifyToken, async (req, res) => {
+        const users = await userCollection.estimatedDocumentCount();
+        const totalSalaryAmount = salariesCollection.estimatedDocumentCount();
+        const pipeline = [
+            {
+                $group: {
+                    _id: null,
+                    totalSalary: {$sum: "$salary"}
+                },
+            },
+            
+        ];
+        const result = await salariesCollection.aggregate(pipeline).toArray();
+        const revenue = result.length > 0 ? result[0].totalSalary : 0;
+
+        res.send({users, totalSalaryAmount, revenue});
+    })
+
+
 
 
     // Send a ping to confirm a successful connection
